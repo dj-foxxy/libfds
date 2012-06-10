@@ -18,5 +18,6 @@ setup(
     package_dir={'': 'src'},
     packages=(
         'fds',
+        'fds.classification',
     ),
 )
