@@ -58,34 +58,19 @@ class BinaryFeature(Feature):
             return 1 - true_probability
 
 
-class WordFeature(BinaryFeature):
-    def __init__(self, word, klasses, training_examples):
-        super(WordFeature, self).__init__(word, klasses, training_examples)
-
-    @property
-    def word(self):
-        return self.name
-
-    def train(self, training_examples):
-        super(WordFeature, self).train((klass, self.word in words)
-                                       for klass, words in training_examples)
-
-    def probability(self, klass, words):
-        return super(WordFeature, self).probability(klass, self.word in words)
-
-
 class NaiveBayesClassifier(object):
     def __init__(self, klasses, features):
         super(NaiveBayesClassifier, self).__init__()
         self.klasses = klasses
         self.features = dict((feature.name, feature) for feature in features)
 
-    def classify(self, feature_vector):
+    def classify(self, observation):
         likelihoods = {}
         for klass in self.klasses:
-            for feature_name, value in feature_vector.iteritems():
-                likelihoods[klass] = \
-                        self.features[feature_name].probability(klass, value)
+            likelihoods[klass] = 1
+            for name, feature in self.features.iteritems():
+                likelihoods[klass] *= feature.probability(klass,
+                                                          observation[name])
         return max(likelihoods, key=lambda klass: likelihoods[klass])
 
 
@@ -93,13 +78,17 @@ class BagOfWords(object):
     def __init__(self, klasses, dictionary, training_examples):
         super(BagOfWords, self).__init__()
         self.dictionary = dictionary
-        self.preprocessor = preprocessor
+
         features = []
         for word in dictionary:
-            features.append(WordFeature(word, klasses, training_examples))
+            features.append(BinaryFeature(word, klasses,
+                    ((klass, word in words)
+                     for klass, words in training_examples)))
+
         self._classifier = NaiveBayesClassifier(klasses, features)
 
     def classify(self, text):
-        return self._classifier.classify(klass, text)
+        return self._classifier.classify(dict((word, word in text)
+                                              for word in self.dictionary))
 
 
