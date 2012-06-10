@@ -17,6 +17,10 @@ class Feature(object):
 
 
 class BinaryFeature(Feature):
+    def __init__(self, name, klasses, training_examples, smoothing=0):
+        self.smoothing = smoothing
+        super(BinaryFeature, self).__init__(name, klasses, training_examples)
+
     def __repr__(self):
         return str(self)
 
@@ -33,7 +37,8 @@ class BinaryFeature(Feature):
         return '\n'.join(parts)
 
     def train(self, training_examples):
-        frequencies = dict((klass, {True: 0, False: 0})
+        frequencies = dict((klass, {True: self.smoothing,
+                                    False: self.smoothing})
                            for klass in self.klasses)
 
         for klass, truth in training_examples:
@@ -64,6 +69,10 @@ class NaiveBayesClassifier(object):
         self.klasses = klasses
         self.features = dict((feature.name, feature) for feature in features)
 
+    def __str__(self):
+        return '\n\n'.join('%s\n%s' % (name, feature)
+                           for name, feature in self.features.iteritems())
+
     def classify(self, observation):
         likelihoods = {}
         for klass in self.klasses:
@@ -75,17 +84,22 @@ class NaiveBayesClassifier(object):
 
 
 class BagOfWords(object):
-    def __init__(self, klasses, dictionary, training_examples):
+    def __init__(self, klasses, dictionary, training_examples, smoothing=0):
         super(BagOfWords, self).__init__()
         self.dictionary = dictionary
 
         features = []
         for word in dictionary:
-            features.append(BinaryFeature(word, klasses,
-                    ((klass, word in words)
-                     for klass, words in training_examples)))
+            features.append(
+                    BinaryFeature(word, klasses,
+                                  ((klass, word in words)
+                                   for klass, words in training_examples),
+                                  smoothing=smoothing))
 
         self._classifier = NaiveBayesClassifier(klasses, features)
+
+    def __str__(self):
+        return str(self._classifier)
 
     def classify(self, text):
         return self._classifier.classify(dict((word, word in text)
